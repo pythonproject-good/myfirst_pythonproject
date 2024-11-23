@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic To-Do List</title>
     <style>
-        /* 기존 스타일 유지 */
         body {
-            background: linear-gradient(135deg, #000428, #004e92);
-            background-size: 400% 400%;
+            background: linear-gradient(135deg, #000428, #004e92); 
+            background-size: 400% 400%; 
             transition: background 1.5s ease-in-out;
             margin: 0;
             padding: 0;
@@ -52,7 +51,6 @@
     </style>
 </head>
 <body>
-    <!-- 첫 번째 열: 사용자 이름 -->
     <div class="column">
         <form method="POST">
             <input type="text" name="name" placeholder="What's your name?" />
@@ -61,14 +59,12 @@
         <h1 id="user-name">{{ user_name if user_name else "" }}</h1>
     </div>
 
-    <!-- 두 번째 열: 현재 시간 -->
     <div class="column">
         <h1 id="hours"></h1>
         <h1 id="minutes"></h1>
         <h1 id="seconds"></h1>
     </div>
 
-    <!-- 세 번째 열: To-Do List -->
     <div class="column">
         <input type="text" id="task-input" placeholder="Write a to do" />
         <button onclick="addTask()">Add</button>
@@ -76,65 +72,44 @@
     </div>
 
     <script>
-        // 이름을 로컬 저장소에 저장
-        function saveName() {
-            const name = document.querySelector("input[name='name']").value.trim();
-            if (name) {
-                localStorage.setItem("userName", name); // 이름 저장
-                displayUserName(); // 화면에 이름 표시
-            }
+        function checkServerStatus() {
+            fetch("/status")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "error") {
+                        alert("현재 서버에 접속할 수 없습니다. 잠시 후 다시 시도해 주세요.");
+                    }
+                });
         }
 
-        // 로컬 저장소에서 이름 가져오기 및 표시
-        function displayUserName() {
-            const userName = localStorage.getItem("userName");
-            if (userName) {
-                document.getElementById("user-name").innerText = userName;
-            }
-        }
-
-        // 페이지 로드 시 저장된 이름을 표시
-        window.onload = function() {
-            displayUserName();
-            renderTodoList(); // To-Do 목록도 로드
-        };
-
-        // 폼 제출 시 이름 저장
-        document.querySelector("form").onsubmit = function (e) {
-            e.preventDefault(); // 폼 제출 방지
-            saveName();
-        };
-
-        // 실시간 시간 업데이트 (클라이언트 로컬 시간 사용)
         function updateTime() {
-            const now = new Date();
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
-            const seconds = now.getSeconds();
-
-            document.getElementById("hours").innerText = hours.toString().padStart(2, "0");
-            document.getElementById("minutes").innerText = minutes.toString().padStart(2, "0");
-            document.getElementById("seconds").innerText = seconds.toString().padStart(2, "0");
+            fetch("/time")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("hours").innerText = data.hours.toString().padStart(2, "0");
+                    document.getElementById("minutes").innerText = data.minutes.toString().padStart(2, "0");
+                    document.getElementById("seconds").innerText = data.seconds.toString().padStart(2, "0");
+                });
         }
 
-        // To-Do 추가
         function addTask() {
             const taskInput = document.getElementById("task-input");
             const task = taskInput.value.trim();
             if (task) {
-                let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-                tasks.push(task);
-                localStorage.setItem("tasks", JSON.stringify(tasks));
-                renderTodoList(); // 목록 업데이트
-                taskInput.value = ""; // 입력창 초기화
+                fetch("/todos", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ task })
+                })
+                .then(response => response.json())
+                .then(data => renderTodoList(data));
+                taskInput.value = "";
             }
         }
 
-        // To-Do 렌더링
-        function renderTodoList() {
+        function renderTodoList(tasks) {
             const todoList = document.getElementById("todo-list");
             todoList.innerHTML = "";
-            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
             tasks.forEach((task, index) => {
                 const li = document.createElement("li");
                 li.innerText = task;
@@ -143,15 +118,12 @@
             });
         }
 
-        // To-Do 삭제
         function deleteTask(index) {
-            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
-            tasks.splice(index, 1);
-            localStorage.setItem("tasks", JSON.stringify(tasks));
-            renderTodoList(); // 목록 업데이트
+            fetch(`/delete/${index}`, { method: "DELETE" })
+                .then(response => response.json())
+                .then(data => renderTodoList(data));
         }
 
-        // 배경 색상 업데이트
         function updateBackground() {
             const colors = [
                 ["#000428", "#004e92"],
@@ -162,23 +134,22 @@
             const body = document.body;
             let i = 0;
 
-            // 초기 배경 즉시 설정
             const gradient = `linear-gradient(135deg, ${colors[i][0]}, ${colors[i][1]})`;
             body.style.background = gradient;
 
-            // 주기적으로 배경 전환
             setInterval(() => {
-                i = (i + 1) % colors.length; // 색상 순환
+                i = (i + 1) % colors.length;
                 const gradient = `linear-gradient(135deg, ${colors[i][0]}, ${colors[i][1]})`;
                 body.style.background = gradient;
-            }, 3000); // 3초마다 변경
+            }, 3000);
         }
 
-        // 주기적으로 시간 업데이트
         setInterval(updateTime, 1000);
 
-        // 초기화 호출
-        updateBackground();
+        window.onload = function() {
+            checkServerStatus();
+            updateBackground();
+        };
     </script>
 </body>
 </html>
