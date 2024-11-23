@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic To-Do List</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #000428, #004e92); /* 초기 배경 설정 */
+            background-size: 400% 400%; /* 더 강렬한 그라데이션 */
+            transition: background 1.5s ease-in-out; /* 배경 전환 효과 */
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            color: white;
+        }
+
+        .column {
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 5rem;
+            margin: 0;
+        }
+
+        input, button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 첫 번째 열: 사용자 이름 -->
+    <div class="column">
+        <form method="POST">
+            <input type="text" name="name" placeholder="What's your name?" />
+            <button type="submit">Submit</button>
+        </form>
+        <h1 id="user-name">{{ user_name if user_name else "" }}</h1>
+    </div>
+
+    <!-- 두 번째 열: 현재 시간 -->
+    <div class="column">
+        <h1 id="hours"></h1>
+        <h1 id="minutes"></h1>
+        <h1 id="seconds"></h1>
+    </div>
+
+    <!-- 세 번째 열: To-Do List -->
+    <div class="column">
+        <input type="text" id="task-input" placeholder="Write a to do" />
+        <button onclick="addTask()">Add</button>
+        <ul id="todo-list"></ul>
+    </div>
+
+    <script>
+        // 이름을 로컬 저장소에 저장
+        function saveName() {
+            const name = document.querySelector("input[name='name']").value.trim();
+            if (name) {
+                localStorage.setItem("userName", name); // 이름 저장
+                displayUserName(); // 화면에 이름 표시
+            }
+        }
+
+        // 로컬 저장소에서 이름 가져오기 및 표시
+        function displayUserName() {
+            const userName = localStorage.getItem("userName");
+            if (userName) {
+                document.getElementById("user-name").innerText = userName;
+            }
+        }
+
+        // 페이지 로드 시 저장된 이름을 표시
+        window.onload = displayUserName;
+
+        // 폼 제출 시 이름 저장
+        document.querySelector("form").onsubmit = function (e) {
+            e.preventDefault(); // 폼 제출 방지
+            saveName();
+        };
+
+        // 실시간 시간 업데이트 (클라이언트 로컬 시간 사용)
+        function updateTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const seconds = now.getSeconds();
+
+            document.getElementById("hours").innerText = hours.toString().padStart(2, "0");
+            document.getElementById("minutes").innerText = minutes.toString().padStart(2, "0");
+            document.getElementById("seconds").innerText = seconds.toString().padStart(2, "0");
+        }
+
+        // TODO 추가
+        function addTask() {
+            const taskInput = document.getElementById("task-input");
+            const task = taskInput.value.trim();
+            if (task) {
+                fetch("/todos", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ task })
+                })
+                .then(response => response.json())
+                .then(data => renderTodoList(data));
+                taskInput.value = "";
+            }
+        }
+
+        // TODO 렌더링
+        function renderTodoList(tasks) {
+            const todoList = document.getElementById("todo-list");
+            todoList.innerHTML = "";
+            tasks.forEach((task, index) => {
+                const li = document.createElement("li");
+                li.innerText = task;
+                li.innerHTML += ` <button onclick="deleteTask(${index})" style="color: red;">Delete</button>`;
+                todoList.appendChild(li);
+            });
+        }
+
+        // TODO 삭제
+        function deleteTask(index) {
+            fetch(`/delete/${index}`, { method: "DELETE" })
+                .then(response => response.json())
+                .then(data => renderTodoList(data));
+        }
+
+        // 배경 색상 업데이트
+        function updateBackground() {
+            const colors = [
+                ["#000428", "#004e92"],
+                ["#283048", "#859398"],
+                ["#485563", "#29323c"],
+                ["#30cfd0", "#330867"]
+            ];
+            const body = document.body;
+            let i = 0;
+
+            // 초기 배경 즉시 설정
+            const gradient = `linear-gradient(135deg, ${colors[i][0]}, ${colors[i][1]})`;
+            body.style.background = gradient;
+
+            // 주기적으로 배경 전환
+            setInterval(() => {
+                i = (i + 1) % colors.length; // 색상 순환
+                const gradient = `linear-gradient(135deg, ${colors[i][0]}, ${colors[i][1]})`;
+                body.style.background = gradient;
+            }, 3000); // 3초마다 변경
+        }
+
+        // 주기적으로 시간 업데이트
+        setInterval(updateTime, 1000);
+
+        // 초기화 호출
+        updateBackground();
+    </script>
+</body>
+</html>
