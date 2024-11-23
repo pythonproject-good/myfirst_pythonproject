@@ -5,10 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dynamic To-Do List</title>
     <style>
+        /* 기존 스타일 유지 */
         body {
-            background: linear-gradient(135deg, #000428, #004e92); /* 초기 배경 설정 */
-            background-size: 400% 400%; /* 더 강렬한 그라데이션 */
-            transition: background 1.5s ease-in-out; /* 배경 전환 효과 */
+            background: linear-gradient(135deg, #000428, #004e92);
+            background-size: 400% 400%;
+            transition: background 1.5s ease-in-out;
             margin: 0;
             padding: 0;
             height: 100vh;
@@ -93,7 +94,10 @@
         }
 
         // 페이지 로드 시 저장된 이름을 표시
-        window.onload = displayUserName;
+        window.onload = function() {
+            displayUserName();
+            renderTodoList(); // To-Do 목록도 로드
+        };
 
         // 폼 제출 시 이름 저장
         document.querySelector("form").onsubmit = function (e) {
@@ -113,26 +117,24 @@
             document.getElementById("seconds").innerText = seconds.toString().padStart(2, "0");
         }
 
-        // TODO 추가
+        // To-Do 추가
         function addTask() {
             const taskInput = document.getElementById("task-input");
             const task = taskInput.value.trim();
             if (task) {
-                fetch("/todos", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task })
-                })
-                .then(response => response.json())
-                .then(data => renderTodoList(data));
-                taskInput.value = "";
+                let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+                tasks.push(task);
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+                renderTodoList(); // 목록 업데이트
+                taskInput.value = ""; // 입력창 초기화
             }
         }
 
-        // TODO 렌더링
-        function renderTodoList(tasks) {
+        // To-Do 렌더링
+        function renderTodoList() {
             const todoList = document.getElementById("todo-list");
             todoList.innerHTML = "";
+            const tasks = JSON.parse(localStorage.getItem("tasks")) || [];
             tasks.forEach((task, index) => {
                 const li = document.createElement("li");
                 li.innerText = task;
@@ -141,11 +143,12 @@
             });
         }
 
-        // TODO 삭제
+        // To-Do 삭제
         function deleteTask(index) {
-            fetch(`/delete/${index}`, { method: "DELETE" })
-                .then(response => response.json())
-                .then(data => renderTodoList(data));
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            tasks.splice(index, 1);
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+            renderTodoList(); // 목록 업데이트
         }
 
         // 배경 색상 업데이트
