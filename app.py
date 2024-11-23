@@ -7,6 +7,14 @@ app = Flask(__name__)
 to_do_list = []
 user_name = None
 
+@app.route("/status")
+def status():
+    try:
+        # 특정 작업이나 DB 연결 등을 확인하여 서버 상태 확인
+        return jsonify({"status": "ok"})
+    except Exception:
+        return jsonify({"status": "error"}), 500
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     global user_name
